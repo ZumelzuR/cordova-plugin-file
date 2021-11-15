@@ -49,7 +49,7 @@ import java.security.Permission;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-
+import java.io.File;
 /**
  * This class provides file and directory services to JavaScript.
  */
@@ -388,12 +388,12 @@ public class FileUtils extends CordovaPlugin {
             cordova.getThreadPool().execute(
                     new Runnable() {
                         public void run() {
-                        	try {
-					callbackContext.success(requestAllPaths());
-				} catch (JSONException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+                            try {
+                                callbackContext.success(requestAllPaths());
+                            } catch (JSONException | IOException e) {
+                                // TODO Auto-generated catch block
+                                e.printStackTrace();
+                            }
                         }
                     }
             );
@@ -567,7 +567,7 @@ public class FileUtils extends CordovaPlugin {
         return PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
     }
 
-    private boolean needPermission(String nativeURL, int permissionType) throws JSONException {
+    private boolean needPermission(String nativeURL, int permissionType) throws JSONException, IOException {
         JSONObject j = requestAllPaths();
         ArrayList<String> allowedStorageDirectories = new ArrayList<String>();
         allowedStorageDirectories.add(j.getString("applicationDirectory"));
@@ -985,24 +985,25 @@ public class FileUtils extends CordovaPlugin {
         return Uri.fromFile(f).toString() + '/';
     }
 
-    private JSONObject requestAllPaths() throws JSONException {
+    private JSONObject requestAllPaths() throws JSONException, IOException {
         Context context = cordova.getActivity();
         JSONObject ret = new JSONObject();
         ret.put("applicationDirectory", "file:///android_asset/");
-        ret.put("applicationStorageDirectory", toDirUrl(context.getFilesDir().getParentFile()));
-        ret.put("dataDirectory", toDirUrl(context.getFilesDir()));
-        ret.put("cacheDirectory", toDirUrl(context.getCacheDir()));
+        // ret.put("applicationStorageDirectory", toDirUrl(context.getFilesDir().getParentFile()));
+        ret.put("applicationStorageDirectory", toDirUrl(context.getFilesDir().getParentFile().getCanonicalFile()));
+        ret.put("dataDirectory", toDirUrl(context.getFilesDir().getCanonicalFile()));
+        ret.put("cacheDirectory", toDirUrl(context.getCacheDir().getCanonicalFile()));
         if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-          try {
-            ret.put("externalApplicationStorageDirectory", toDirUrl(context.getExternalFilesDir(null).getParentFile()));
-            ret.put("externalDataDirectory", toDirUrl(context.getExternalFilesDir(null)));
-            ret.put("externalCacheDirectory", toDirUrl(context.getExternalCacheDir()));
-            ret.put("externalRootDirectory", toDirUrl(Environment.getExternalStorageDirectory()));
-          }
-          catch(NullPointerException e) {
-            /* If external storage is unavailable, context.getExternal* returns null */
-              LOG.d(LOG_TAG, "Unable to access these paths, most liklely due to USB storage");
-          }
+            try {
+                ret.put("externalApplicationStorageDirectory", toDirUrl(context.getExternalFilesDir(null).getParentFile().getCanonicalFile()));
+                ret.put("externalDataDirectory", toDirUrl(context.getExternalFilesDir(null).getCanonicalFile()));
+                ret.put("externalCacheDirectory", toDirUrl(context.getExternalCacheDir().getCanonicalFile()));
+                ret.put("externalRootDirectory", toDirUrl(Environment.getExternalStorageDirectory().getCanonicalFile()));
+            }
+            catch(NullPointerException e) {
+                /* If external storage is unavailable, context.getExternal* returns null */
+                LOG.d(LOG_TAG, "Unable to access these paths, most liklely due to USB storage");
+            }
         }
         return ret;
     }
