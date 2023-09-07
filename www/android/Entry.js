@@ -19,28 +19,15 @@
  *
 */
 
-// Map of fsName -> FileSystem.
-let fsMap = null;
-const FileSystem = require('./FileSystem');
-const exec = require('cordova/exec');
-
-// Overridden by Android, BlackBerry 10 and iOS to populate fsMap.
-require('./fileSystems').getFs = function (name, callback) {
-    function success (response) {
-        fsMap = {};
-        for (let i = 0; i < response.length; ++i) {
-            const fsRoot = response[i];
-            if (fsRoot) {
-                const fs = new FileSystem(fsRoot.filesystemName, fsRoot);
-                fsMap[fs.name] = fs;
-            }
-        }
-        callback(fsMap[name]);
-    }
-
-    if (fsMap) {
-        callback(fsMap[name]);
-    } else {
-        exec(success, null, 'File', 'requestAllFileSystems', []);
+module.exports = {
+    /**
+   * Return a URL that can be used to identify this entry.
+   * Use a URL that can be used to as the src attribute of a <video> or
+   * <audio> tag. If that is not possible, construct a http(s)://(localhost) URL.
+   */
+    toURL: function () {
+        return window.location.origin.includes('file://')
+            ? this.nativeURL
+            : this.toInternalURL();
     }
 };
